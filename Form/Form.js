@@ -1,5 +1,53 @@
 import { database, ref, set, get, update, remove, onValue, child, push } from '../Script/firebase.js';
 
+
+
+
+
+
+// Fetch the room types from Firebase and update the webpage
+document.addEventListener("DOMContentLoaded", function () {
+    // Reference to the 'eachRoomPricing' node in Firebase
+    const roomsRef = ref(database, 'eachRoomsPricing');
+
+    // Fetch the room pricing data from Firebase
+    get(roomsRef)
+        .then(snapshot => {
+            if (snapshot.exists()) {
+                const roomsData = snapshot.val(); // Get the data from Firebase
+
+                // Iterate over the roomsData to update the room types in HTML
+                for (const roomNumber in roomsData) {
+                    if (roomsData.hasOwnProperty(roomNumber)) {
+                        const room = roomsData[roomNumber];
+
+                        // Find the corresponding room in the HTML by room number
+                        const roomItem = document.querySelector(`#floor-1-rooms li input[value="${roomNumber}"]`);
+
+                        if (roomItem) {
+                            // Find the <h4> element that displays the room type
+                            const roomTypeElement = roomItem.closest('li').querySelector('.type-room');
+
+                            // Update the room type in the HTML
+                            if (roomTypeElement) {
+                                roomTypeElement.innerText = room.roomType; // Update with the room type from Firebase
+                            }
+                        }
+                    }
+                }
+            } else {
+                console.log("No data available in Firebase.");
+            }
+        })
+        .catch(error => {
+            console.error("Error fetching room data from Firebase:", error);
+        });
+});
+
+
+
+
+
 // Add event listener to the submit button
 const submitButton = document.querySelector('#submit-btn');
 document.querySelector('.days-lable').value = 1;
@@ -60,6 +108,19 @@ submitButton.addEventListener('click', () => {
         amountInBirr: amountInBirr
     }
 
+    const paymentData = {
+        name: name,
+        age: age,
+        nationality: nationality,
+        dob: dob,
+        sex: sex,
+        days: days,
+        selectedRoom: selectedRoom,
+        timestamp: ethiopianTime,
+        paymentMethod: selectedPayment,
+        amountInBirr: amountInBirr
+    }
+
     showRemovePopup(userData);
 
 
@@ -116,6 +177,29 @@ submitButton.addEventListener('click', () => {
                 console.error('Error saving data: ', error);
                 alert('Failed to submit customer information!');
             });
+
+
+            // Function to generate a 7-digit random number
+            function generateRandomKey() {
+                return Math.floor(1000000000 + Math.random() * 90000000000); // Generates a 7-digit random number
+            }
+
+            const randomKey = generateRandomKey(); // Generate a unique 7-digit random number
+
+            // Reference to the Payments node in the database
+            const paymentRef = ref(database, 'Payments');
+
+            // Create a reference for the new payment entry with the 7-digit random key
+            const amtRef = ref(database, `Payments/${randomKey}`);
+
+            set(amtRef, paymentData)
+                .then(() => {
+                    console.log('Payment data successfully saved!');
+                })
+                .catch((error) => {
+                    console.error('Error saving data: ', error);
+                    alert('Failed to submit customer payment information!');
+                });
 
         }
         else {
@@ -180,6 +264,9 @@ daysInput.addEventListener('input', () => {
 
 
 
+
+
+
 // rooms price
 
 window.addEventListener('DOMContentLoaded', (event) => {
@@ -225,6 +312,14 @@ window.addEventListener('DOMContentLoaded', (event) => {
 
 
 
+
+
+
+
+
+
+
+/* Price Reveal */
 document.querySelectorAll('.floor-input').forEach(input => {
     input.addEventListener('change', () => {
         const nextElement = input.nextElementSibling;
