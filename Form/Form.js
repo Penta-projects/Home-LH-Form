@@ -21,16 +21,34 @@ document.addEventListener("DOMContentLoaded", function () {
                     if (roomsData.hasOwnProperty(roomNumber)) {
                         const room = roomsData[roomNumber];
 
+                        // Determine floor based on room number
+                        const floorSelector = roomNumber.startsWith('1') ? '#floor-1-rooms' : roomNumber.startsWith('2') ? '#floor-2-rooms' : roomNumber.startsWith('3') ? '#floor-3-rooms' : '#floor-4-rooms';
+
                         // Find the corresponding room in the HTML by room number
-                        const roomItem = document.querySelector(`#floor-1-rooms li input[value="${roomNumber}"]`);
+                        const roomItem = document.querySelector(`${floorSelector} li input[value="${roomNumber}"]`);
 
                         if (roomItem) {
-                            // Find the <h4> element that displays the room type
-                            const roomTypeElement = roomItem.closest('li').querySelector('.type-room');
+                            // Update room type and pricing
+                            const roomTypeElement = roomItem.closest('li').querySelector('h4');
+                            const roomPriceElement = roomItem.closest('li').querySelector('.price');
 
-                            // Update the room type in the HTML
+                            console.log(roomPriceElement)
                             if (roomTypeElement) {
-                                roomTypeElement.innerText = room.roomType; // Update with the room type from Firebase
+                                roomTypeElement.innerText = room.roomType;
+
+                                    roomPriceElement.textContent = room.roomAmount;
+                              
+
+                                // Add CSS classes based on room type
+                                if (room.roomType === 'Double') {
+                                    roomTypeElement.className = 'double-type';
+                                } else if (room.roomType === 'Deluxe') {
+                                    roomTypeElement.className = 'deluxe-type';
+                                } else if (room.roomType === 'Standard') {
+                                    roomTypeElement.className = 'standard-type';
+                                } else if (room.roomType === 'Single') {
+                                    roomTypeElement.className = 'single-type';
+                                }
                             }
                         }
                     }
@@ -43,6 +61,7 @@ document.addEventListener("DOMContentLoaded", function () {
             console.error("Error fetching room data from Firebase:", error);
         });
 });
+
 
 
 
@@ -297,11 +316,11 @@ window.addEventListener('DOMContentLoaded', (event) => {
             const roomTypeClass = roomTypeElement.className.toLowerCase().split('-')[0]; // Get the room type from the class name
             const priceElement = roomTypeElement.nextElementSibling?.nextElementSibling; // Safe navigation using optional chaining
 
+            
             // Ensure priceElement exists and update the price
-            if (priceElement && roomPricing[roomTypeClass]) {
+            if (priceElement && roomPricing[roomTypeClass] && priceElement.innerHTML.trim() === '') {
                 priceElement.textContent = roomPricing[roomTypeClass];
             } else if (priceElement) {
-                priceElement.textContent = 'N/A'; // Default if no price found
             }
         });
     };
@@ -319,7 +338,7 @@ window.addEventListener('DOMContentLoaded', (event) => {
 
 
 
-/* Price Reveal */
+/* Price calc */
 document.querySelectorAll('.floor-input').forEach(input => {
     input.addEventListener('change', () => {
         const nextElement = input.nextElementSibling;

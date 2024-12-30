@@ -135,7 +135,7 @@ select{
     border-color: #fc6b13;
     border-style: solid;
 }
-.deluxe-type, .Standard-type, .double-type{
+li h4{
     display: inline-block;
 }
 
