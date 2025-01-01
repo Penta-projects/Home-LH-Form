@@ -61,3 +61,11 @@ button:hover {
         margin-left: 10px;
     }
 }
+@media(max-width: 594px){
+    .room-set{
+        grid-template-columns: repeat(1, 100%);
+    }
+    .room{
+        width: 190px;
+    }
+}

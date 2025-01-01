@@ -122,18 +122,39 @@ function showRemovePopup(customerId, roomNumber) {
 function removeCustomer(customerId, roomNumber) {
     // Reference to the customer and the room
     const customerRef = ref(database, 'customers/' + customerId);
+    const paymentsRef = ref(database, 'Payments');
     const roomRef = ref(database, 'rooms/' + roomNumber); // Reference to the room
-
-    // Remove the room only once (after the customer is successfully removed)
-    remove(customerRef)
+    
+    // Update payment method for the customer
+    update(customerRef, { paymentMethod: 'Paid' })
         .then(() => {
-            return remove(roomRef);  // Remove the room after the customer
+            // Find and update the corresponding payment entry
+            return get(paymentsRef);
+        })
+        .then((snapshot) => {
+            if (snapshot.exists()) {
+                const payments = snapshot.val();
+                for (const paymentId in payments) {
+                    if (payments[paymentId].name === customerId) {
+                        const specificPaymentRef = ref(database, `Payments/${paymentId}`);
+                        return update(specificPaymentRef, { paymentMethod: 'Paid' });
+                    }
+                }
+                throw new Error('No matching payment entry found for the customer');
+            } else {
+                throw new Error('No payment records found');
+            }
         })
         .then(() => {
-            console.log('Room and customer removed successfully');
-            loadCustomers();  // Reload the customer list after removal
+            // Remove the room entry after successful updates
+            return remove(roomRef);
+        })
+        .then(() => {
+            console.log('Payment method updated, room removed successfully');
+            loadCustomers(); // Reload the customer list after updates
         })
         .catch((error) => {
-            console.error('Error removing customer or room:', error);
+            console.error('Error updating payment method or removing room:', error);
         });
+    
 }
