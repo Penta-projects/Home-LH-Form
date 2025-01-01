@@ -341,6 +341,7 @@ days.forEach(day => {
                                     <p><strong> Sex:</strong><strong class="color-blue"> ${payment.sex}</strong></p>
                                     <p><strong> Original Length of stay:</strong> <strong class="color-blue">${payment.days} Days</strong></p>
                                     <p><strong> How many days left:</strong> <strong class="color-blue">3 Days</strong></p>
+                                    <p><strong> Amount:</strong> <strong class="color-blue">${payment.amountInBirr} Birr</strong></p>
                                     <p><strong> Registration by:</strong> <strong class="color-blue">Arafat</strong></p>
                                 </div>`;
                         document.querySelector('.rooms').innerHTML += HTML
