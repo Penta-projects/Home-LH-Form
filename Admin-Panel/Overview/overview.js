@@ -8,6 +8,7 @@ const dailyRevenueElement = document.querySelector('.total-money-made-day h1');
 // Reference to the rooms and customers nodes in the database
 const roomsRef = ref(database, 'rooms');
 const customersRef = ref(database, 'customers');
+const orgRef = ref(database, 'organisation_room');
 
 // DOM Reference
 const monthlyRevenueElement = document.querySelector('.total-money-made-month h1');
@@ -105,6 +106,7 @@ onValue(paymentsRef, (snapshot) => {
     monthlyRevenueElement.textContent = 'Error';
 });
 
+
 /* Custom Timestamp Parser */
 function parseCustomTimestamp(timestamp) {
     const regex = /([a-zA-Z]+) (\d{1,2}), (\d{4}) at (\d{1,2}):(\d{2}):(\d{2}) (AM|PM)/;
@@ -128,7 +130,6 @@ function parseCustomTimestamp(timestamp) {
         return new Date(year, month, day, hour, minute, second);
     } else {
         console.error('Invalid timestamp format:', timestamp);
-        return new Date(NaN); // Return an invalid date
     }
 }
 
@@ -186,6 +187,55 @@ onValue(roomsRef, (snapshot) => {
 
 
 
+// Function to update the UI based on room booking status
+function updateRoomStatusORG(roomNumber, status) {
+    // Create a new list item for each room
+    const roomElement = document.createElement('li');
+    roomElement.textContent = roomNumber;
+    roomElement.dataset.room = roomNumber; // Set room number as a data attribute
+
+    console.log(roomElement)
+
+    // Add appropriate class based on room status
+    if (status === 'booked') {
+        roomElement.classList.add('booked');
+    } else {
+        roomElement.classList.add('available');
+    }
+
+    // Append the room to the correct floor based on the room number
+    if (roomNumber.startsWith('10')) {
+        document.querySelector('.org-daily-table #floor-one').appendChild(roomElement);
+    } else if (roomNumber.startsWith('20')) {
+        document.querySelector('.org-daily-table #floor-two').appendChild(roomElement);
+    } else if (roomNumber.startsWith('30')) {
+        document.querySelector('.org-daily-table #floor-three').appendChild(roomElement);
+    } else if (roomNumber.startsWith('40')) {
+        document.querySelector('.org-daily-table #floor-four').appendChild(roomElement);
+    }
+}
+
+// Fetch room statuses from Firebase
+onValue(orgRef, (snapshot) => {
+    const orgData = snapshot.val();
+
+    console.log(orgData)
+    // Clear the previous room data to avoid duplication
+    document.querySelector('.org-daily-table #floor-one').innerHTML = '';
+    document.querySelector('.org-daily-table #floor-two').innerHTML = '';
+    document.querySelector('.org-daily-table #floor-three').innerHTML = '';
+    document.querySelector('.org-daily-table #floor-four').innerHTML = '';
+
+    // Iterate over rooms data and display rooms dynamically
+    Object.keys(orgData).forEach((roomNumber) => {
+        const status = orgData[roomNumber];
+        console.log(status)
+        updateRoomStatusORG(roomNumber, status);
+    });
+});
+
+
+
 
 
 // Function to get the last 6 days with the format "Month short form day"
@@ -209,7 +259,7 @@ function getLastSixDays() {
         dayDiv.classList.add('day');
         
         // Add the month and day as h2 elements
-        dayDiv.innerHTML = `<h2>${month}</h2><h2>${day}</h2>`;
+        dayDiv.innerHTML = `<h2 class="month-last-six-day">${month}</h2> <h2>${day}</h2>`;
         
         // Append the new day div to the container
         daysContainer.appendChild(dayDiv);
@@ -234,6 +284,8 @@ function formatDate(month, day) {
 // Loop through each 'day' and add a click event listener
 days.forEach(day => {
     day.addEventListener('click', async (event) => {
+        document.querySelector('.rooms').innerHTML = '';
+
         // Get the clicked day (the second <h2> element inside the clicked day div)
         const dayNumber = event.target.closest('.day').querySelector('h2:nth-of-type(2)').textContent;
         const month = event.target.closest('.day').querySelector('h2:nth-of-type(1)').textContent;
@@ -242,7 +294,7 @@ days.forEach(day => {
         console.log(`You clicked: ${month} ${dayNumber}`);
 
         // Format the selected date
-        const selectedDateFormatted = formatDate(month, dayNumber);
+        const selectedDateFormatted = `${month} ${dayNumber}`;
 
         // Fetch the Payments data from Firebase
         const paymentsRef = ref(database, 'Payments');
@@ -255,18 +307,46 @@ days.forEach(day => {
 
             for (const paymentId in payments) {
                 const payment = payments[paymentId];
-                const paymentTimestamp = new Date(payment.timestamp); // Convert timestamp to Date object
+                const paymentTimestamp = payment.timestamp // Convert timestamp to Date object
                 const formattedPaymentDate = paymentTimestamp.toLocaleString('en-US', { month: 'short', day: '2-digit' });
-                console.log(selectedDateFormatted)
+                
+                
 
-                if (formattedPaymentDate === selectedDateFormatted) {
+                // Remove the time part to avoid the invalid date error
+                const cleanedDateStr = formattedPaymentDate.split(' at ')[0];
+
+                // Create a Date object from the cleaned string
+                const date = new Date(cleanedDateStr);
+
+                const formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+
+
+                if (formattedDate === selectedDateFormatted) {
                     matchingPayments.push(payment); // Store matching payments
                 }
+
             }
 
             if (matchingPayments.length > 0) {
-                // Display the matching payments (you can update the UI accordingly)
-                console.log('Payments on selected date:', matchingPayments);
+
+                    matchingPayments.forEach((payment)=>{
+                        console.log(payment);
+                        
+                        const HTML = `
+                                <div class="room">
+                                    <h1 class="room-no">Room ${payment.selectedRoom}</h1>
+                                    <h3>${payment.name}</h3>
+                                    <h3 class="date">${payment.timestamp}</h3>
+                                    <p><strong> Sex:</strong><strong class="color-blue"> ${payment.sex}</strong></p>
+                                    <p><strong> Original Length of stay:</strong> <strong class="color-blue">${payment.days} Days</strong></p>
+                                    <p><strong> How many days left:</strong> <strong class="color-blue">3 Days</strong></p>
+                                    <p><strong> Registration by:</strong> <strong class="color-blue">Arafat</strong></p>
+                                </div>`;
+                        document.querySelector('.rooms').innerHTML += HTML
+
+                    });
+                    
             } else {
                 console.log('No payments found for this day');
             }
@@ -278,4 +358,91 @@ days.forEach(day => {
         days.forEach(d => d.classList.remove('selected')); // Remove previous selections
         event.target.closest('.day').classList.add('selected'); // Add selected class to the clicked day
     });
+});
+
+
+const selectedDate = document.querySelector('.free-hand-date')
+
+
+selectedDate.addEventListener('change', async (event) => {
+    document.querySelector('.rooms').innerHTML = '';
+
+    // Get the clicked day (the second <h2> element inside the clicked day div)
+    const selectedDateValue = selectedDate.value;
+
+    // Create a Date object from the string
+    const date = new Date(selectedDateValue);
+
+
+    // Subtract days dynamically (e.g., go back 3 days to reach Dec 31)
+    date.setDate(date.getDate());
+
+    // Format as "Dec 31"
+    const formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+
+    console.log(formattedDate); 
+
+
+    // Format the selected date
+    const selectedDateFormatted = formattedDate;
+
+    // Fetch the Payments data from Firebase
+    const paymentsRef = ref(database, 'Payments');
+    const snapshot = await get(paymentsRef);
+
+    if (snapshot.exists()) {
+        // Loop through all payment entries and check if the timestamp matches the selected date
+        const payments = snapshot.val();
+        const matchingPayments = [];
+
+        for (const paymentId in payments) {
+            const payment = payments[paymentId];
+            const paymentTimestamp = payment.timestamp // Convert timestamp to Date object
+            const formattedPaymentDate = paymentTimestamp.toLocaleString('en-US', { month: 'short', day: '2-digit' });
+            
+            
+
+            // Remove the time part to avoid the invalid date error
+            const cleanedDateStr = formattedPaymentDate.split(' at ')[0];
+
+            // Create a Date object from the cleaned string
+            const date = new Date(cleanedDateStr);
+
+            const formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+
+
+            if (formattedDate === selectedDateFormatted) {
+                matchingPayments.push(payment); // Store matching payments
+            }
+
+        }
+
+        if (matchingPayments.length > 0) {
+
+                matchingPayments.forEach((payment)=>{
+                    console.log(payment);
+                    
+                    const HTML = `
+                            <div class="room">
+                                <h1 class="room-no">Room ${payment.selectedRoom}</h1>
+                                <h3>${payment.name}</h3>
+                                <h3 class="date">${payment.timestamp}</h3>
+                                <p><strong> Sex:</strong><strong class="color-blue"> ${payment.sex}</strong></p>
+                                <p><strong> Original Length of stay:</strong> <strong class="color-blue">${payment.days} Days</strong></p>
+                                <p><strong> How many days left:</strong> <strong class="color-blue">3 Days</strong></p>
+                                <p><strong> Registration by:</strong> <strong class="color-blue">Arafat</strong></p>
+                            </div>`;
+                    document.querySelector('.rooms').innerHTML += HTML
+
+                });
+                
+        } else {
+            console.log('No payments found for this day');
+        }
+    } else {
+        console.log('No payments data available');
+    }
+
 });

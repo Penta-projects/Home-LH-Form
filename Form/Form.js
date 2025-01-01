@@ -1,6 +1,10 @@
 import { database, ref, set, get, update, remove, onValue, child, push } from '../Script/firebase.js';
 
 
+const data = localStorage.getItem('Entering Pin');
+if(data != 45284270810258310208532513043010152410200935993930){
+ document.body.innerHTML = '<h1>You are not allowed</h1>'
+}
 
 
 
@@ -229,21 +233,49 @@ submitButton.addEventListener('click', () => {
 });
 
 // Real-time Listener for Room Availability
+// Reference both 'rooms' and 'organisation_room'
 const roomStatusRef = ref(database, 'rooms');
-onValue(roomStatusRef, (snapshot) => {
-    const roomsData = snapshot.val();
-    if (roomsData) {
+const orgRoomsRef = ref(database, 'organisation_room');
+
+// Listen for updates on both references
+onValue(roomStatusRef, (roomSnapshot) => {
+    const roomsData = roomSnapshot.val();
+
+    onValue(orgRoomsRef, (orgSnapshot) => {
+        const organisations = orgSnapshot.val();
+
+        // Update the radio buttons based on both sources
         document.querySelectorAll('input[type="radio"]').forEach(radio => {
-            if (roomsData[radio.value] === 'booked') {
+            let isBooked = false;
+
+            // Check 'rooms' reference
+            if (roomsData && roomsData[radio.value] === 'booked') {
+                isBooked = true;
+            }
+
+            // Check 'organisation_room' reference
+            if (organisations) {
+                for (const org in organisations) {
+                    const bookedRooms = organisations[org]?.bookedRooms;
+                    if (bookedRooms && bookedRooms.includes(radio.value)) {
+                        isBooked = true;
+                        break;
+                    }
+                }
+            }
+
+            // Apply styles based on booking status
+            if (isBooked) {
                 radio.disabled = true;
                 radio.closest('li').classList.add('booked');
                 radio.closest('li').style.color = 'grey';
             } else {
                 radio.disabled = false;
+                radio.closest('li').classList.remove('booked');
                 radio.closest('li').style.color = 'black';
             }
         });
-    }
+    });
 });
 
 // Update Room Status After Booking
@@ -259,7 +291,6 @@ function updateRoomStatus(roomNumber) {
         });
     }
 }
-
 
 
 // Fetch elements from the DOM

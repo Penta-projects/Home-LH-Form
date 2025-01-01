@@ -92,3 +92,8 @@ li{
 .ending-date{
     color: #67a8df;
 }
+.organisation-name{
+    font-size: 15px;
+    color: gray;
+    text-decoration: underline;
+}

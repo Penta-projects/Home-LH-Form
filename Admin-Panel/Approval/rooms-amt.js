@@ -1,4 +1,4 @@
-import { database, ref, set, update } from '../../Script/firebase.js';
+import { getDatabase, database, ref, set, get, update, remove, onValue, child , push} from '../../Script/firebase.js';
 
 // Reference to the database
 const dbRef = ref(database);
@@ -86,3 +86,86 @@ document.getElementById('submit-change-rooms-detail').addEventListener('click', 
     // Log registered rooms
     console.log('Registered Rooms:', registeredRooms);
 });
+
+
+
+// Fetch both room details and default pricing
+Promise.all([
+    get(child(dbRef, "eachRoomsPricing")),
+    get(child(dbRef, "roomPricing"))
+]).then(([roomsSnapshot, pricingSnapshot]) => {
+    if (roomsSnapshot.exists() && pricingSnapshot.exists()) {
+        const roomData = roomsSnapshot.val();
+        const roomPricing = pricingSnapshot.val();
+
+        console.log("Room Data:", roomData); 
+        console.log("Room Pricing:", roomPricing);
+
+        // Loop through each room in the data
+        Object.keys(roomData).forEach(roomNumber => {
+            const roomInfo = roomData[roomNumber];
+            
+            // Find the corresponding input and select element by matching room number
+            const roomInput = document.querySelector(`input[value="${roomNumber}"]`);
+            
+            if (roomInput) {
+                // Get the parent <li> element to access related elements
+                const roomLi = roomInput.closest('li');
+                
+                // Set Room Type
+                const roomTypeSelect = roomLi.querySelector('.room-type');
+                if (roomTypeSelect) {
+                    roomTypeSelect.value = roomInfo.roomType || "Deluxe"; // Default to 'Deluxe' if empty
+                }
+                
+                // Set Room Amount
+                const roomAmountInput = roomLi.querySelector('input[type="text"]');
+                if (roomAmountInput) {
+                    if (roomInfo.roomAmount && roomInfo.roomAmount.trim() !== "") {
+                        // If roomAmount exists, use it
+                        roomAmountInput.value = roomInfo.roomAmount;
+                    } else {
+                        // If roomAmount is empty, fetch price based on roomType
+                        const roomType = roomInfo.roomType ? roomInfo.roomType.toLowerCase() : "deluxe";
+                        const defaultPrice = roomPricing[roomType] || "Not Set";
+                        roomAmountInput.value = defaultPrice;
+                        roomAmountInput.placeholder = defaultPrice === "Not Set" ? "Enter the amount" : "";
+                    }
+                }
+            }
+        });
+    } else {
+        console.log("No room data or pricing data available");
+    }
+}).catch((error) => {
+    console.error("Error fetching data:", error);
+});
+
+
+
+
+// Fetch room pricing data
+get(child(dbRef, "roomPricing"))
+    .then((pricingSnapshot) => {
+        if (pricingSnapshot.exists()) {
+            const roomPricing = pricingSnapshot.val();
+
+            console.log("Room Pricing:", roomPricing);
+
+            // Map prices to respective input fields
+            const deluxeInput = document.querySelector('.deluxe-amount');
+            const standardInput = document.querySelector('.standard-amount');
+            const singleInput = document.querySelector('.single-amount');
+            const doubleInput = document.querySelector('.double-amount');
+
+            if (deluxeInput) deluxeInput.value = roomPricing.deluxe || "";
+            if (standardInput) standardInput.value = roomPricing.standard || "";
+            if (singleInput) singleInput.value = roomPricing.single || "";
+            if (doubleInput) doubleInput.value = roomPricing.double || "";
+        } else {
+            console.log("No pricing data available");
+        }
+    })
+    .catch((error) => {
+        console.error("Error fetching pricing data:", error);
+    });
